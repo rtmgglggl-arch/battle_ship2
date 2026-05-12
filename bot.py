@@ -30,6 +30,138 @@ CELL_MISS = "O"
 games = {}
 # user_id -> code
 user_game = {}
+# user_id -> "ru" | "en"
+user_lang = {}
+
+STRINGS = {
+    "ru": {
+        "start_help": (
+            "🚢 <b>Морской бой</b>\n\n"
+            "/new — создать игру (получишь код)\n"
+            "/join КОД — присоединиться по коду\n"
+            "/replace — перекинуть расстановку\n"
+            "/ready — готов к бою\n"
+            "/surrender — сдаться\n"
+            "/english — интерфейс на английском\n"
+            "/russian — интерфейс на русском\n\n"
+            "Ход вводится координатой: <code>A1</code>, <code>B7</code>, <code>J10</code>"
+        ),
+        "lang_russian": "Язык интерфейса: русский.",
+        "lang_english": "Язык интерфейса: английский.",
+        "already_in_game": "⚠️ Ты уже в игре. /surrender чтобы выйти.",
+        "game_created": (
+            "🎲 Игра создана. Код: <code>{code}</code>\n"
+            "Отправь его сопернику — пусть напишет <code>/join {code}</code>\n\n"
+            "Пока можешь /replace — перекинуть расстановку."
+        ),
+        "join_format": "ℹ️ Формат: /join КОД",
+        "game_not_found": "❌ Игра с таким кодом не найдена.",
+        "game_already_started": "⏱️ Игра уже идёт или завершена.",
+        "joined": "✅ Присоединился. /replace — перекинуть расстановку, /ready — готов к бою.",
+        "opponent_joined_host": "🎮 Соперник подключился! Жми /ready когда готов.",
+        "not_in_game": "ℹ️ Ты не в игре.",
+        "no_replace_playing": "🚫 Бой уже начался, расстановку менять нельзя.",
+        "already_ready": "✅ Ты уже нажал /ready.",
+        "layout_yours": "Твоя расстановка:",
+        "layout_new": "Новая расстановка:",
+        "legend_image": "ℹ️ Обозначения: квадрат = корабль, * = попадание, красная точка = промах",
+        "caption_enemy": "🎯 Поле противника (твои выстрелы)",
+        "caption_own": "🛡️ Твоё поле",
+        "legend_ascii": "ℹ️ Обозначения: # корабль, * попадание 🔥, O промах 🔴, . неизвестно",
+        "boards_ascii": (
+            "✨ {prefix}\n"
+            "🎯 Поле противника (твои выстрелы):\n{enemy}\n"
+            "🛡️ Твоё поле:\n{own}\n"
+            "{legend}"
+        ),
+        "wait_second_player": "👥 Ждём второго игрока.",
+        "ready_ok": "✅ Готов.",
+        "your_turn": "🔫 Твой ход! Введи координату, например B7",
+        "opponent_turn": "⏳ Ход соперника. Готовься!",
+        "opponent_ready_nudge": "📣 Соперник готов. Жми /ready, когда расставишь корабли.",
+        "surrendered_you": "🏳️ Ты сдался.",
+        "opponent_surrendered_win": "🏆 Соперник сдался. Победа!",
+        "not_your_turn": "⏳ Сейчас не твой ход.",
+        "move_format": "ℹ️ Формат хода: A1, B7, J10",
+        "already_shot": "⚠️ Ты уже стрелял сюда.",
+        "miss_you": "🔴 Мимо ({coord}). Ход соперника.",
+        "miss_opp": "🛡️ Соперник стрелял {coord} — мимо. Твой ход!",
+        "hit_you": "🔥 Попадание ({coord})! Стреляй ещё.",
+        "hit_opp": "💥 Соперник попал ({coord}). Ждём его хода.",
+        "sunk_win": "💥 Корабль уничтожен ({coord})!\n🏆 ПОБЕДА!",
+        "sunk_loss": "☠️ Соперник уничтожил {coord}.\n💀 Поражение.",
+        "sunk_you": "💥 Корабль уничтожен ({coord})! Стреляй ещё.",
+        "sunk_opp": "🚨 Соперник уничтожил корабль ({coord}). Ждём его хода.",
+    },
+    "en": {
+        "start_help": (
+            "🚢 <b>Battleship</b>\n\n"
+            "/new — create a game (you get a code)\n"
+            "/join CODE — join with the code\n"
+            "/replace — reroll your ship layout\n"
+            "/ready — ready to fight\n"
+            "/surrender — resign\n"
+            "/english — English UI\n"
+            "/russian — Russian UI\n\n"
+            "Moves are coordinates: <code>A1</code>, <code>B7</code>, <code>J10</code>"
+        ),
+        "lang_russian": "Interface language: Russian.",
+        "lang_english": "Interface language: English.",
+        "already_in_game": "⚠️ You are already in a game. Use /surrender to leave.",
+        "game_created": (
+            "🎲 Game created. Code: <code>{code}</code>\n"
+            "Send it to your opponent — they should use <code>/join {code}</code>\n\n"
+            "You can /replace to reroll your layout meanwhile."
+        ),
+        "join_format": "ℹ️ Format: /join CODE",
+        "game_not_found": "❌ No game with that code.",
+        "game_already_started": "⏱️ That game is already in progress or finished.",
+        "joined": "✅ You joined. /replace to reroll layout, /ready when ready to fight.",
+        "opponent_joined_host": "🎮 Opponent joined! Type /ready when you are set.",
+        "not_in_game": "ℹ️ You are not in a game.",
+        "no_replace_playing": "🚫 Battle has started; you cannot change the layout.",
+        "already_ready": "✅ You already pressed /ready.",
+        "layout_yours": "Your layout:",
+        "layout_new": "New layout:",
+        "legend_image": "ℹ️ Legend: square = ship, * = hit, red dot = miss",
+        "caption_enemy": "🎯 Opponent's board (your shots)",
+        "caption_own": "🛡️ Your board",
+        "legend_ascii": "ℹ️ Legend: # ship, * hit 🔥, O miss 🔴, . unknown",
+        "boards_ascii": (
+            "✨ {prefix}\n"
+            "🎯 Opponent's board (your shots):\n{enemy}\n"
+            "🛡️ Your board:\n{own}\n"
+            "{legend}"
+        ),
+        "wait_second_player": "👥 Waiting for the second player.",
+        "ready_ok": "✅ Ready.",
+        "your_turn": "🔫 Your turn! Enter a coordinate, e.g. B7",
+        "opponent_turn": "⏳ Opponent's turn. Stand by!",
+        "opponent_ready_nudge": "📣 Opponent is ready. Press /ready when your ships are placed.",
+        "surrendered_you": "🏳️ You surrendered.",
+        "opponent_surrendered_win": "🏆 Opponent surrendered. You win!",
+        "not_your_turn": "⏳ Not your turn right now.",
+        "move_format": "ℹ️ Move format: A1, B7, J10",
+        "already_shot": "⚠️ You already shot here.",
+        "miss_you": "🔴 Miss ({coord}). Opponent's turn.",
+        "miss_opp": "🛡️ Opponent fired at {coord} — miss. Your turn!",
+        "hit_you": "🔥 Hit ({coord})! Fire again.",
+        "hit_opp": "💥 Opponent hit ({coord}). Waiting for their move.",
+        "sunk_win": "💥 Ship destroyed ({coord})!\n🏆 YOU WIN!",
+        "sunk_loss": "☠️ Opponent destroyed {coord}.\n💀 Defeat.",
+        "sunk_you": "💥 Ship destroyed ({coord})! Fire again.",
+        "sunk_opp": "🚨 Opponent destroyed a ship ({coord}). Waiting for their move.",
+    },
+}
+
+
+def lang_of(uid):
+    return user_lang.get(uid, "ru")
+
+
+def t(uid, key, **kwargs):
+    s = STRINGS[lang_of(uid)][key]
+    return s.format(**kwargs) if kwargs else s
 
 
 def new_code():
@@ -342,19 +474,23 @@ async def send_boards(game, user_id, prefix=""):
     if own_img and enemy_img:
         await bot.send_message(
             user_id,
-            f"✨ {prefix}\nℹ️ Обозначения: квадрат = корабль, * = попадание, красная точка = промах",
+            f"✨ {prefix}\n{t(user_id, 'legend_image')}",
         )
-        await bot.send_photo(user_id, InputFile(enemy_img), caption="🎯 Поле противника (твои выстрелы)")
-        await bot.send_photo(user_id, InputFile(own_img), caption="🛡️ Твоё поле")
+        await bot.send_photo(
+            user_id, InputFile(enemy_img), caption=t(user_id, "caption_enemy")
+        )
+        await bot.send_photo(user_id, InputFile(own_img), caption=t(user_id, "caption_own"))
         return
 
     own = render(p, show_ships=True)
     enemy = render(p, show_ships=False)
-    text = (
-        f"✨ {prefix}\n"
-        f"🎯 Поле противника (твои выстрелы):\n{enemy}\n"
-        f"🛡️ Твоё поле:\n{own}\n"
-        f"ℹ️ Обозначения: # корабль, * попадание 🔥, O промах 🔴, . неизвестно"
+    text = t(
+        user_id,
+        "boards_ascii",
+        prefix=prefix,
+        enemy=enemy,
+        own=own,
+        legend=t(user_id, "legend_ascii"),
     )
     await bot.send_message(user_id, text, parse_mode="HTML")
 
@@ -365,23 +501,29 @@ def other(game, user_id):
 
 @dp.message_handler(commands=["start", "help"])
 async def cmd_start(message: types.Message):
-    await message.reply(
-        "🚢 <b>Морской бой</b>\n\n"
-        "/new — создать игру (получишь код)\n"
-        "/join КОД — присоединиться по коду\n"
-        "/replace — перекинуть расстановку\n"
-        "/ready — готов к бою\n"
-        "/surrender — сдаться\n\n"
-        "Ход вводится координатой: <code>A1</code>, <code>B7</code>, <code>J10</code>",
-        parse_mode="HTML",
-    )
+    uid = message.from_user.id
+    await message.reply(t(uid, "start_help"), parse_mode="HTML")
+
+
+@dp.message_handler(commands=["english"])
+async def cmd_english(message: types.Message):
+    uid = message.from_user.id
+    user_lang[uid] = "en"
+    await message.reply(t(uid, "lang_english"))
+
+
+@dp.message_handler(commands=["russian"])
+async def cmd_russian(message: types.Message):
+    uid = message.from_user.id
+    user_lang[uid] = "ru"
+    await message.reply(t(uid, "lang_russian"))
 
 
 @dp.message_handler(commands=["new"])
 async def cmd_new(message: types.Message):
     uid = message.from_user.id
     if uid in user_game:
-        await message.reply("⚠️ Ты уже в игре. /surrender чтобы выйти.")
+        await message.reply(t(uid, "already_in_game"))
         return
     code = new_code()
     game = {
@@ -395,42 +537,36 @@ async def cmd_new(message: types.Message):
     reroll(game["players"][uid])
     games[code] = game
     user_game[uid] = code
-    await message.reply(
-        f"🎲 Игра создана. Код: <code>{code}</code>\n"
-        f"Отправь его сопернику — пусть напишет <code>/join {code}</code>\n\n"
-        f"Пока можешь /replace — перекинуть расстановку.",
-        parse_mode="HTML",
-    )
-    await send_boards(game, uid, "Твоя расстановка:")
+    await message.reply(t(uid, "game_created", code=code), parse_mode="HTML")
+    await send_boards(game, uid, t(uid, "layout_yours"))
 
 
 @dp.message_handler(commands=["join"])
 async def cmd_join(message: types.Message):
     uid = message.from_user.id
     if uid in user_game:
-        await message.reply("Ты уже в игре. /surrender чтобы выйти.")
+        await message.reply(t(uid, "already_in_game"))
         return
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
-        await message.reply("ℹ️ Формат: /join КОД")
+        await message.reply(t(uid, "join_format"))
         return
     code = parts[1].strip().upper()
     game = games.get(code)
     if not game:
-        await message.reply("❌ Игра с таким кодом не найдена.")
+        await message.reply(t(uid, "game_not_found"))
         return
     if game["state"] != "WAITING":
-        await message.reply("⏱️ Игра уже идёт или завершена.")
+        await message.reply(t(uid, "game_already_started"))
         return
     game["players"][uid] = new_player()
     reroll(game["players"][uid])
     user_game[uid] = code
     game["state"] = "PLACING"
-    await message.reply(
-        "✅ Присоединился. /replace — перекинуть расстановку, /ready — готов к бою."
-    )
-    await send_boards(game, uid, "Твоя расстановка:")
-    await bot.send_message(game["host"], "🎮 Соперник подключился! Жми /ready когда готов.")
+    await message.reply(t(uid, "joined"))
+    await send_boards(game, uid, t(uid, "layout_yours"))
+    host = game["host"]
+    await bot.send_message(host, t(host, "opponent_joined_host"))
 
 
 @dp.message_handler(commands=["replace"])
@@ -438,18 +574,18 @@ async def cmd_replace(message: types.Message):
     uid = message.from_user.id
     code = user_game.get(uid)
     if not code:
-        await message.reply("ℹ️ Ты не в игре.")
+        await message.reply(t(uid, "not_in_game"))
         return
     game = games[code]
     if game["state"] not in ("WAITING", "PLACING"):
-        await message.reply("🚫 Бой уже начался, расстановку менять нельзя.")
+        await message.reply(t(uid, "no_replace_playing"))
         return
     p = game["players"][uid]
     if p["ready"]:
-        await message.reply("✅ Ты уже нажал /ready.")
+        await message.reply(t(uid, "already_ready"))
         return
     reroll(p)
-    await send_boards(game, uid, "Новая расстановка:")
+    await send_boards(game, uid, t(uid, "layout_new"))
 
 
 @dp.message_handler(commands=["ready"])
@@ -457,14 +593,14 @@ async def cmd_ready(message: types.Message):
     uid = message.from_user.id
     code = user_game.get(uid)
     if not code:
-        await message.reply("ℹ️ Ты не в игре.")
+        await message.reply(t(uid, "not_in_game"))
         return
     game = games[code]
     if len(game["players"]) < 2:
-        await message.reply("👥 Ждём второго игрока.")
+        await message.reply(t(uid, "wait_second_player"))
         return
     game["players"][uid]["ready"] = True
-    await message.reply("✅ Готов.")
+    await message.reply(t(uid, "ready_ok"))
     opp = other(game, uid)
     if game["players"][opp]["ready"]:
         # start
@@ -472,10 +608,10 @@ async def cmd_ready(message: types.Message):
         game["turn"] = random.choice(list(game["players"].keys()))
         first = game["turn"]
         second = other(game, first)
-        await bot.send_message(first, "🔫 Твой ход! Введи координату, например B7")
-        await bot.send_message(second, "⏳ Ход соперника. Готовься!")
+        await bot.send_message(first, t(first, "your_turn"))
+        await bot.send_message(second, t(second, "opponent_turn"))
     else:
-        await bot.send_message(opp, "📣 Соперник готов. Жми /ready, когда расставишь корабли.")
+        await bot.send_message(opp, t(opp, "opponent_ready_nudge"))
 
 
 @dp.message_handler(commands=["surrender"])
@@ -483,15 +619,15 @@ async def cmd_surrender(message: types.Message):
     uid = message.from_user.id
     code = user_game.get(uid)
     if not code:
-        await message.reply("ℹ️ Ты не в игре.")
+        await message.reply(t(uid, "not_in_game"))
         return
     game = games[code]
-    await message.reply("🏳️ Ты сдался.")
+    await message.reply(t(uid, "surrendered_you"))
     for pid in list(game["players"].keys()):
         user_game.pop(pid, None)
         if pid != uid:
             try:
-                await bot.send_message(pid, "🏆 Соперник сдался. Победа!")
+                await bot.send_message(pid, t(pid, "opponent_surrendered_win"))
             except Exception:
                 pass
     games.pop(code, None)
@@ -507,15 +643,15 @@ async def handle_move(message: types.Message):
     if game["state"] != "PLAYING":
         return
     if game["turn"] != uid:
-        await message.reply("⏳ Сейчас не твой ход.")
+        await message.reply(t(uid, "not_your_turn"))
         return
     move = parse_move(message.text)
     if not move:
-        await message.reply("ℹ️ Формат хода: A1, B7, J10")
+        await message.reply(t(uid, "move_format"))
         return
     shooter = game["players"][uid]
     if move in shooter["shots_hit"] or move in shooter["shots_miss"]:
-        await message.reply("⚠️ Ты уже стрелял сюда.")
+        await message.reply(t(uid, "already_shot"))
         return
 
     opp_id = other(game, uid)
@@ -533,8 +669,8 @@ async def handle_move(message: types.Message):
         shooter["shots_miss"].add(move)
         opp["incoming_misses"].add(move)
         game["turn"] = opp_id
-        await send_boards(game, uid, f"🔴 Мимо ({coord_name}). Ход соперника.")
-        await send_boards(game, opp_id, f"🛡️ Соперник стрелял {coord_name} — мимо. Твой ход!")
+        await send_boards(game, uid, t(uid, "miss_you", coord=coord_name))
+        await send_boards(game, opp_id, t(opp_id, "miss_opp", coord=coord_name))
         return
 
     hit_ship["alive"].remove(move)
@@ -542,8 +678,8 @@ async def handle_move(message: types.Message):
     opp["incoming_hits"].add(move)
 
     if hit_ship["alive"]:
-        await send_boards(game, uid, f"🔥 Попадание ({coord_name})! Стреляй ещё.")
-        await send_boards(game, opp_id, f"💥 Соперник попал ({coord_name}). Ждём его хода.")
+        await send_boards(game, uid, t(uid, "hit_you", coord=coord_name))
+        await send_boards(game, opp_id, t(opp_id, "hit_opp", coord=coord_name))
         return
 
     # killed: auto-mark border as misses
@@ -554,15 +690,15 @@ async def handle_move(message: types.Message):
                 opp["incoming_misses"].add(n)
 
     if all(not s["alive"] for s in opp["ships"]):
-        await send_boards(game, uid, f"💥 Корабль уничтожен ({coord_name})!\n🏆 ПОБЕДА!")
-        await send_boards(game, opp_id, f"☠️ Соперник уничтожил {coord_name}.\n💀 Поражение.")
+        await send_boards(game, uid, t(uid, "sunk_win", coord=coord_name))
+        await send_boards(game, opp_id, t(opp_id, "sunk_loss", coord=coord_name))
         for pid in list(game["players"].keys()):
             user_game.pop(pid, None)
         games.pop(code, None)
         return
 
-    await send_boards(game, uid, f"💥 Корабль уничтожен ({coord_name})! Стреляй ещё.")
-    await send_boards(game, opp_id, f"🚨 Соперник уничтожил корабль ({coord_name}). Ждём его хода.")
+    await send_boards(game, uid, t(uid, "sunk_you", coord=coord_name))
+    await send_boards(game, opp_id, t(opp_id, "sunk_opp", coord=coord_name))
 
 
 if __name__ == "__main__":
