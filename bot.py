@@ -140,6 +140,63 @@ def render(player, show_ships):
     return "<pre>" + "\n".join(rows) + "</pre>"
 
 
+def _board_font_paths():
+    """Bold sans-serif candidates (Windows / Linux / macOS)."""
+    return [
+        r"C:\Windows\Fonts\arialbd.ttf",
+        r"C:\Windows\Fonts\calibrib.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/Library/Fonts/Arial Bold.ttf",
+    ]
+
+
+def _load_board_fonts(cell_size):
+    """Font sizes scale with cell so the board stays readable on small PNGs (phones)."""
+    letter_pt = max(11, int(cell_size * 0.42))
+    mark_pt = max(10, int(cell_size * 0.36))
+    for path in _board_font_paths():
+        if not os.path.isfile(path):
+            continue
+        try:
+            return (
+                ImageFont.truetype(path, letter_pt),
+                ImageFont.truetype(path, mark_pt),
+            )
+        except OSError:
+            continue
+    return ImageFont.load_default(), ImageFont.load_default()
+
+
+def _text_wh(draw, text, font):
+    if hasattr(draw, "textbbox"):
+        l, t, r, b = draw.textbbox((0, 0), text, font=font)
+        return r - l, b - t
+    w, h = draw.textsize(text, font=font)
+    return w, h
+
+
+def _draw_centered_text(draw, cx, cy, text, font, fill):
+    tw, th = _text_wh(draw, text, font)
+    draw.text((cx - tw // 2, cy - th // 2), text, fill=fill, font=font)
+
+
+def _compute_board_layout(max_width=400, max_height=520):
+    """Pick cell size so the image fits typical phone chat width without shrinking text to dust."""
+    for cell in range(54, 17, -2):
+        left = max(36, int(cell * 1.12))
+        top = max(36, int(cell * 1.12))
+        pad_r = max(12, int(cell * 0.35))
+        w = left + FIELD * cell + pad_r
+        h = top + FIELD * cell + pad_r
+        if w <= max_width and h <= max_height:
+            return cell, left, top, pad_r
+    cell = 16
+    left = top = 28
+    pad_r = 10
+    return cell, left, top, pad_r
+
+
 def _draw_dashed_line(draw, start, end, color, dash=6, gap=5, width=2):
     x1, y1 = start
     x2, y2 = end
@@ -160,20 +217,21 @@ def _draw_dashed_line(draw, start, end, color, dash=6, gap=5, width=2):
 
 
 def render_board_image(player, show_ships):
-    """Render board as image close to reference style."""
+    """Render board as image close to reference style; layout scales down for narrow screens."""
     if Image is None:
         return None
 
-    cell = 56
-    left = 70
-    top = 70
+    max_w = int(os.getenv("BOARD_IMAGE_MAX_WIDTH", "400"))
+    max_h = int(os.getenv("BOARD_IMAGE_MAX_HEIGHT", "520"))
+    cell, left, top, pad_r = _compute_board_layout(max_width=max_w, max_height=max_h)
     size = FIELD * cell
-    width = left + size + 24
-    height = top + size + 24
+    width = left + size + pad_r
+    height = top + size + pad_r
 
-    bg = (22, 69, 116)
-    grid = (102, 204, 255)
-    text_color = (102, 204, 255)
+    # Reference palette: deep navy + cyan grid/labels
+    bg = (26, 74, 122)  # ~#1a4a7a
+    grid = (107, 185, 240)  # ~#6bb9f0
+    text_color = grid
     ship_color = (150, 225, 255)
     hit_color = (255, 120, 80)
     miss_color = (255, 80, 80)
@@ -181,25 +239,35 @@ def render_board_image(player, show_ships):
 
     img = Image.new("RGB", (width, height), bg)
     draw = ImageDraw.Draw(img)
-    font = ImageFont.load_default()
+    font_label, font_mark = _load_board_fonts(cell)
+    line_w = max(1, min(3, cell // 22))
+    dash = max(4, cell // 10)
+    gap = max(3, cell // 12)
 
-    # Letters and numbers
+    label_row_cy = top // 2
+    label_col_cx = left // 2
+
+    # Letters A–J above columns, numbers 1–10 at left
     for i, letter in enumerate(LETTERS):
-        x = left + i * cell + cell // 2 - 4
-        draw.text((x, 22), letter, fill=text_color, font=font)
+        cx = left + i * cell + cell // 2
+        _draw_centered_text(draw, cx, label_row_cy, letter, font_label, text_color)
     for i in range(FIELD):
-        y = top + i * cell + cell // 2 - 6
-        draw.text((22, y), str(i + 1), fill=text_color, font=font)
+        cy = top + i * cell + cell // 2
+        _draw_centered_text(draw, label_col_cx, cy, str(i + 1), font_label, text_color)
 
     # Dashed grid
     for i in range(FIELD + 1):
         x = left + i * cell
-        _draw_dashed_line(draw, (x, top), (x, top + size), grid)
+        _draw_dashed_line(draw, (x, top), (x, top + size), grid, dash=dash, gap=gap, width=line_w)
     for i in range(FIELD + 1):
         y = top + i * cell
-        _draw_dashed_line(draw, (left, y), (left + size, y), grid)
+        _draw_dashed_line(draw, (left, y), (left + size, y), grid, dash=dash, gap=gap, width=line_w)
 
     # Marks
+    ship_half = max(5, cell // 8)
+    dot_r = max(3, cell // 14)
+    small = max(2, cell // 20)
+
     for y in range(FIELD):
         for x in range(FIELD):
             cell_xy = (x, y)
@@ -211,20 +279,36 @@ def render_board_image(player, show_ships):
                 hit = cell_xy in player["incoming_hits"]
                 miss = cell_xy in player["incoming_misses"]
                 if hit:
-                    draw.text((cx - 6, cy - 6), "*", fill=hit_color, font=font)
+                    _draw_centered_text(draw, cx, cy, "*", font_mark, hit_color)
                 elif miss:
-                    draw.ellipse((cx - 4, cy - 4, cx + 4, cy + 4), fill=miss_color)
+                    draw.ellipse(
+                        (cx - dot_r, cy - dot_r, cx + dot_r, cy + dot_r),
+                        fill=miss_color,
+                    )
                 elif in_ship:
-                    draw.rectangle((cx - 7, cy - 7, cx + 7, cy + 7), outline=ship_color, width=2)
+                    draw.rectangle(
+                        (cx - ship_half, cy - ship_half, cx + ship_half, cy + ship_half),
+                        outline=ship_color,
+                        width=line_w,
+                    )
                 else:
-                    draw.rectangle((cx - 3, cy - 3, cx + 3, cy + 3), fill=unknown_color)
+                    draw.rectangle(
+                        (cx - small, cy - small, cx + small, cy + small),
+                        fill=unknown_color,
+                    )
             else:
                 if cell_xy in player["shots_hit"]:
-                    draw.text((cx - 6, cy - 6), "*", fill=hit_color, font=font)
+                    _draw_centered_text(draw, cx, cy, "*", font_mark, hit_color)
                 elif cell_xy in player["shots_miss"]:
-                    draw.ellipse((cx - 4, cy - 4, cx + 4, cy + 4), fill=miss_color)
+                    draw.ellipse(
+                        (cx - dot_r, cy - dot_r, cx + dot_r, cy + dot_r),
+                        fill=miss_color,
+                    )
                 else:
-                    draw.rectangle((cx - 3, cy - 3, cx + 3, cy + 3), fill=unknown_color)
+                    draw.rectangle(
+                        (cx - small, cy - small, cx + small, cy + small),
+                        fill=unknown_color,
+                    )
 
     buf = BytesIO()
     img.save(buf, format="PNG")
